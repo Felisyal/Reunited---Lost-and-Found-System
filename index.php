@@ -69,7 +69,6 @@ function passwordError($password) {
 }
 
 
-
 // ─── REMEMBER ME HELPERS ──────────────────────────────────────────────────────
 
 
@@ -1901,16 +1900,14 @@ if (!empty($studentPasswordError)) {
 
             <label for="dept-select">Department</label>
 
-            <select name="Departments" id="dept-select">
+            <select name="Departments" id="dept-select" required>
 
                 <option value="">Select Department</option>
-
+                <option value="Staff">Staff</option>
+                <option value="GeneralEd">General Education</option>
                 <option value="IT">Information Technology</option>
-
                 <option value="HM">Hospitality Management</option>
-
                 <option value="CoEp">Computer Engineering</option>
-
                 <option value="OA">Office Administration</option>
 
             </select>
@@ -2259,7 +2256,8 @@ if (!empty($studentPasswordError)) {
 
     <?php endif; ?>
 
-
+<script src="password-toggle.js"></script>
+<script src="password-guide.js"></script>
 
 </body>
 

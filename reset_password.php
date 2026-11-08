@@ -272,5 +272,7 @@ require_once __DIR__ . '/config/db.php'; endif; ?>
 
 </div>
 
+<script src="password-toggle.js"></script>
+
 </body>
 </html>

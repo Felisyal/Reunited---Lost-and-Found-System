@@ -157,13 +157,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="column-found">
-                    <label for="locationFoundItem">Location Found</label>
+                    <label for="locationFoundItem" id="locationLabel">Location Found</label>
                     <input type="text" id="locationFoundItem" name="locationFoundItem"
                         list="locations" placeholder="Type a location..." required />
                 </div>
 
                 <div class="column-found">
-                    <label for="dateFoundItem">Date Found</label>
+                    <label for="dateFoundItem" id="dateLabel">Date Found</label>
                     <div class="date-found">
                         <input type="date" id="dateFoundItem" name="dateFoundItem" />
                     </div>
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="column-found">
                     <label>Upload Image</label>
-                    <span class="upload-staff-descrp">
+                    <span class="upload-staff-descrp" id="uploadNote">
                         <strong>Note: </strong>Please upload an <strong>actual photo</strong> of the item.
                         The photo must clearly show the item being <strong>held by the person who found or lost</strong>,
                         with their <strong>face visible</strong>, for verification purposes.

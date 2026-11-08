@@ -979,6 +979,44 @@ async function deleteUser(id, role) {
         });
     }
 
+// Staff "Add Lost & Found Item": switch labels + upload note based on report type
+const STAFF_REPORT_TEXT = {
+    Found: {
+        location: 'Location Found',
+        date: 'Date Found',
+        note: '<strong>Note: </strong>Please upload an <strong>actual photo</strong> of the item. ' +
+              'The photo must clearly show the item being <strong>held by the person who found or lost</strong>, ' +
+              'with their <strong>face visible</strong>, for verification purposes.'
+    },
+    Lost: {
+        location: 'Last Seen Location',
+        date: 'Date Lost',
+        note: '<strong>Note: </strong>Please find and upload an image of the <strong>exact same item</strong> ' +
+              'that you lost (same brand, model, color, and design), or an <strong>old photo</strong> of your item ' +
+              'if you have one. This helps us match it with found items.'
+    }
+};
+
+function updateStaffReportType() {
+    const select = document.getElementById('reportType');
+    if (!select || !document.getElementById('foundForm')) return;
+
+    const text = STAFF_REPORT_TEXT[select.value] || STAFF_REPORT_TEXT.Found;
+    const locationLabel = document.getElementById('locationLabel');
+    const dateLabel     = document.getElementById('dateLabel');
+    const uploadNote    = document.getElementById('uploadNote');
+
+    if (locationLabel) locationLabel.textContent = text.location;
+    if (dateLabel)     dateLabel.textContent     = text.date;
+    if (uploadNote)    uploadNote.innerHTML      = text.note;
+}
+
+document.addEventListener('change', function (e) {
+    if (e.target.id === 'reportType' && e.target.closest('#foundForm')) {
+        updateStaffReportType();
+    }
+});
+
 document.addEventListener('change', function (e) {
     if (e.target.id === 'categoryFoundItem') {
         const otherWrapper = document.getElementById('other-category');
@@ -1003,7 +1041,8 @@ function setupFoundForm() {
         e.preventDefault();
         const fileInput = document.getElementById('foundImage');
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            showSuccessModal('Please attach a photo of the found item.', 'Missing photo');
+            const type = (document.getElementById('reportType') || {}).value === 'Lost' ? 'lost' : 'found';
+            showSuccessModal('Please attach a photo of the ' + type + ' item.', 'Missing photo');
             return;
         }
 
@@ -1018,6 +1057,7 @@ function setupFoundForm() {
             if (data.status === 'success') {
                 showSuccessModal(data.message, 'Item added');
                 foundForm.reset();
+                updateStaffReportType();
 
                 const uploadBox = document.querySelector('#foundForm .upload-box');
                 if (uploadBox) {
@@ -1047,6 +1087,7 @@ function setupFoundForm() {
         const foundForm = document.getElementById('foundForm');
         if (foundForm) {
             foundForm.reset();
+            updateStaffReportType();
             const uploadBox = document.querySelector('.upload-box');
             if (uploadBox) {
                 uploadBox.innerHTML = `
