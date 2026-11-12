@@ -96,14 +96,15 @@ if (!empty($_FILES['itemImage']['name'])) {
         exit;
     }
 
+    // MIME type => the only extension the file is allowed to be saved with
     $allowedTypes = [
-        'image/jpeg',
-        'image/png'
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png'
     ];
 
     $fileType = mime_content_type($_FILES['itemImage']['tmp_name']);
 
-    if (!in_array($fileType, $allowedTypes, true)) {
+    if (!isset($allowedTypes[$fileType]) || @getimagesize($_FILES['itemImage']['tmp_name']) === false) {
         echo json_encode([
             'success' => false,
             'error' => 'Only JPG and PNG images are allowed'
@@ -121,9 +122,9 @@ if (!empty($_FILES['itemImage']['name'])) {
         mkdir($uploadDir, 0755, true);
     }
 
-    $extension = strtolower(
-        pathinfo($_FILES['itemImage']['name'], PATHINFO_EXTENSION)
-    );
+    // Never trust the user's filename: the extension comes from the verified MIME type,
+    // so a file like "shell.php" can never be saved as an executable .php file
+    $extension = $allowedTypes[$fileType];
 
     $imageName = uniqid('item_', true) . '.' . $extension;
 

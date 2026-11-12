@@ -1,5 +1,19 @@
 <?php
 require_once dirname(__DIR__) . '/config/db.php';
+session_start();
+
+// Only logged-in admins may view, update or delete items
+if (empty($_SESSION['admin_id'])) {
+    http_response_code(403);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
+        echo json_encode(["success" => false, "error" => "Unauthorized"]);
+    } else {
+        echo 'Unauthorized';
+    }
+    exit;
+}
+
 $host = DB_HOST;
 $dbUser = DB_USER;
 $dbPass = DB_PASS;
