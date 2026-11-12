@@ -54,6 +54,64 @@ if ($description === '') {
     exit;
 }
 
+// --- Server-side checks (the "Your Item" button in browse-items.php is only a UI hint
+//     and can be bypassed with DevTools or a direct request) ---
+
+// 1. The item must exist
+if ($item_type === 'found') {
+    $itemStmt = $conn->prepare("
+        SELECT staff_employee_id AS owner_id, status, expiration_date
+        FROM found_items
+        WHERE id = ?
+    ");
+} else {
+    $itemStmt = $conn->prepare("
+        SELECT user_id AS owner_id, status, expiration_date
+        FROM lost_items
+        WHERE id = ?
+    ");
+}
+$itemStmt->bind_param("i", $item_id);
+$itemStmt->execute();
+$item = $itemStmt->get_result()->fetch_assoc();
+$itemStmt->close();
+
+if (!$item) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Item not found'
+    ]);
+    exit;
+}
+
+// 2. Students cannot claim an item they reported themselves
+//    (same owner rule used by browse-items.php)
+$sessionStudentID = $_SESSION['student_id'] ?? '';
+if ($sessionStudentID !== '' && (string)$item['owner_id'] === (string)$sessionStudentID) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'You cannot claim your own item'
+    ]);
+    exit;
+}
+
+// 3. The item must still be claimable (not Claimed, Expired, Rejected or Pending)
+if (!in_array($item['status'], ['Approved', 'Ready for Claim'], true)) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'This item can no longer be claimed (status: ' . $item['status'] . ')'
+    ]);
+    exit;
+}
+
+if (!empty($item['expiration_date']) && $item['expiration_date'] < date('Y-m-d')) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'This item has already expired'
+    ]);
+    exit;
+}
+
 $check = $conn->prepare("
     SELECT id
     FROM claims_table

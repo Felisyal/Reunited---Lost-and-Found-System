@@ -70,8 +70,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $imageName = null;
 
     if (!empty($_FILES['image']['name'])) {
-        $imageName = time() . "_" . basename($_FILES['image']['name']);
-        $uploadDir = ($type === 'Found') 
+        // Validate the upload: real JPG/PNG only, max 10MB.
+        // The extension comes from the verified image type, never from the user's filename.
+        $allowedImageTypes = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png'];
+        $imgInfo = ($_FILES['image']['error'] === UPLOAD_ERR_OK)
+            ? @getimagesize($_FILES['image']['tmp_name'])
+            : false;
+
+        if ($imgInfo === false || !isset($allowedImageTypes[$imgInfo[2]])) {
+            echo json_encode(["success" => false, "error" => "Only JPG and PNG images are allowed"]);
+            exit;
+        }
+        if ($_FILES['image']['size'] > 10 * 1024 * 1024) {
+            echo json_encode(["success" => false, "error" => "Image must not exceed 10MB"]);
+            exit;
+        }
+
+        $imageName = uniqid('item_', true) . '.' . $allowedImageTypes[$imgInfo[2]];
+        $uploadDir = ($type === 'Found')
             ? "../staff-pages/uploads/" 
             : "../student-pages/uploads/";
 

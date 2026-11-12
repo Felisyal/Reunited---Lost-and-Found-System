@@ -1,6 +1,13 @@
 <?php
 require_once dirname(__DIR__) . '/config/db.php';
 session_start();
+
+// Only logged-in admins may see reports (they contain student names and IDs)
+if (empty($_SESSION['admin_id'])) {
+    http_response_code(403);
+    exit('Unauthorized');
+}
+
 $host = DB_HOST;
 $dbUser = DB_USER;
 $dbPass = DB_PASS;

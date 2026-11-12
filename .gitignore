@@ -29,5 +29,7 @@ staff-images/test.php
 # User uploads (personal data)
 student-pages/uploads/*
 !student-pages/uploads/.gitkeep
+!student-pages/uploads/.htaccess
 staff-pages/uploads/*
 !staff-pages/uploads/.gitkeep
+!staff-pages/uploads/.htaccess

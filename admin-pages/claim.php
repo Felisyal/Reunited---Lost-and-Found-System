@@ -63,21 +63,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
-            $stmt = $conn->prepare(
-                "UPDATE claims_table SET status=? WHERE id=?"
+            require_once __DIR__ . '/sync_functions.php';
+
+            // Load the claim so we know which item it belongs to
+            $claimStmt = $conn->prepare(
+                "SELECT item_id, item_type, status FROM claims_table WHERE id=?"
             );
+            $claimStmt->bind_param("i", $id);
+            $claimStmt->execute();
+            $claim = $claimStmt->get_result()->fetch_assoc();
+            $claimStmt->close();
 
-            $stmt->bind_param("si", $status, $id);
-
-            if ($stmt->execute()) {
-                logAudit($conn, 'CLAIM_STATUS_UPDATED', 'claim', $id, "status=$status");
-                echo json_encode(["success" => true]);
-            } else {
-                echo json_encode([
-                    "success" => false,
-                    "error" => $stmt->error
-                ]);
+            if (!$claim) {
+                echo json_encode(["success" => false, "error" => "Claim not found"]);
+                exit;
             }
+
+            $itemId    = (int)$claim['item_id'];
+            $itemType  = $claim['item_type'];
+            $oldStatus = strtolower(trim($claim['status']));
+            $itemTable = ($itemType === 'found') ? 'found_items' : 'lost_items';
+
+            // An item can only be handed over once: block a second "claimed" claim
+            if ($status === 'claimed' && $oldStatus !== 'claimed') {
+                $dupStmt = $conn->prepare(
+                    "SELECT id FROM claims_table
+                     WHERE item_id=? AND item_type=? AND status='claimed' AND id<>?"
+                );
+                $dupStmt->bind_param("isi", $itemId, $itemType, $id);
+                $dupStmt->execute();
+                $dupStmt->store_result();
+                $alreadyClaimed = $dupStmt->num_rows > 0;
+                $dupStmt->close();
+
+                if ($alreadyClaimed) {
+                    echo json_encode([
+                        "success" => false,
+                        "error" => "This item was already claimed by another student"
+                    ]);
+                    exit;
+                }
+            }
+
+            try {
+                $conn->begin_transaction();
+
+                $stmt = $conn->prepare(
+                    "UPDATE claims_table SET status=? WHERE id=?"
+                );
+                $stmt->bind_param("si", $status, $id);
+                if (!$stmt->execute()) throw new Exception($stmt->error);
+                $stmt->close();
+
+                // Keep the item (and its original report) in sync with the claim
+                $newItemStatus = null;
+                if ($status === 'claimed' && $oldStatus !== 'claimed') {
+                    $newItemStatus = 'Claimed';            // item handed over
+                } elseif ($oldStatus === 'claimed' && $status !== 'claimed') {
+                    $newItemStatus = 'Ready for Claim';    // hand-over undone
+                }
+
+                if ($newItemStatus !== null) {
+                    $itemStmt = $conn->prepare("UPDATE $itemTable SET status=? WHERE id=?");
+                    $itemStmt->bind_param("si", $newItemStatus, $itemId);
+                    if (!$itemStmt->execute()) throw new Exception($itemStmt->error);
+                    $itemStmt->close();
+
+                    syncReportStatus($conn, $itemId, $itemType, $newItemStatus);
+                }
+
+                $conn->commit();
+            } catch (Throwable $e) {
+                $conn->rollback();
+                error_log("update_claim failed for claim #$id: " . $e->getMessage());
+                echo json_encode(["success" => false, "error" => "Failed to update claim"]);
+                exit;
+            }
+
+            $details = "status=$status";
+            if ($newItemStatus !== null) {
+                $details .= ", item=$itemType#$itemId -> $newItemStatus";
+            }
+            logAudit($conn, 'CLAIM_STATUS_UPDATED', 'claim', $id, $details);
+            echo json_encode(["success" => true]);
 
             exit;
         }

@@ -2,6 +2,12 @@
 require_once dirname(__DIR__) . '/config/db.php';
 session_start();
 
+// Only logged-in admins may see the admin dashboard
+if (empty($_SESSION['admin_id'])) {
+    http_response_code(403);
+    exit('Unauthorized');
+}
+
 $host = DB_HOST;
 $dbUser = DB_USER;
 $dbPass = DB_PASS;
